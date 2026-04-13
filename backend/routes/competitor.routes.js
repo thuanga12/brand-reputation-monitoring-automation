@@ -1,10 +1,10 @@
 import express from "express";
-// Chỉ import hàm, không khai báo lại logic ở đây
 import { getCompetitors } from "../controllers/competitor.controller.js"; 
 
 const router = express.Router();
 
-// Sử dụng hàm đã import từ controller
+// Định nghĩa endpoint GET tại /api/competitors/
 router.get("/", getCompetitors); 
 
+// BẮT BUỘC: Dòng này phải ở cuối file để app.js nhận diện được
 export default router;
