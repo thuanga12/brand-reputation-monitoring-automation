@@ -6,7 +6,11 @@ import reviewRoutes from "./routes/review.routes.js";
 import statisticsRoutes from "./routes/statistics.routes.js";
 import competitorRoutes from "./routes/competitor.routes.js";
 import crmRoutes from "./routes/crm.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
+import reviewHighlandRoutes from "./routes/reviewHighland.routes.js";
 
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/reviews-highland", reviewHighlandRoutes);
 const app = express();
 
 app.use(cors());
