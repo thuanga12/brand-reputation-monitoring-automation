@@ -4,7 +4,7 @@ export const getHighlandReviews = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
 
-    const skip = (page - 1) * limit;
+    const skip = (Number(page) - 1) * Number(limit);
 
     const items = await ReviewHighland.find()
       .sort({ createdAt: -1 })
@@ -18,7 +18,7 @@ export const getHighlandReviews = async (req, res) => {
       total,
       page: Number(page),
       limit: Number(limit),
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / Number(limit)),
     });
   } catch (error) {
     console.error("Highland error:", error);

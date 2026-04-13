@@ -21,7 +21,6 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 👇 QUAN TRỌNG: ép đúng collection
 export default mongoose.model(
   "ReviewHighland",
   reviewSchema,
