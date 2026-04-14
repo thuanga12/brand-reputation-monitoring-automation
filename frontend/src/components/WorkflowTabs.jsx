@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 const WorkflowTabs = () => {
   const baseClass =
-    "px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap";
+    "px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2";
 
   const activeClass = "text-[#B22830] border-[#B22830] bg-red-50";
   const inactiveClass =
@@ -22,7 +22,7 @@ const WorkflowTabs = () => {
       </NavLink>
 
       <NavLink
-        to="/analysis"
+        to="/interaction"
         className={({ isActive }) =>
           `${baseClass} ${isActive ? activeClass : inactiveClass}`
         }
@@ -31,7 +31,7 @@ const WorkflowTabs = () => {
       </NavLink>
 
       <NavLink
-        to="/interaction"
+        to="/ai-chat" 
         className={({ isActive }) =>
           `${baseClass} ${isActive ? activeClass : inactiveClass}`
         }
@@ -39,14 +39,19 @@ const WorkflowTabs = () => {
         💬 Tương tác AI
       </NavLink>
 
-      {/* Tab chưa có route */}
       <button className={`${baseClass} ${inactiveClass}`}>
         🗂 Quản trị dữ liệu
       </button>
 
-      <button className={`${baseClass} ${inactiveClass}`}>
+      {/* ĐÃ SỬA: Chuyển button thành NavLink trỏ tới /analysis */}
+      <NavLink
+        to="/analysis"
+        className={({ isActive }) =>
+          `${baseClass} ${isActive ? activeClass : inactiveClass}`
+        }
+      >
         🧑‍🤝‍🧑 Theo dõi đối thủ
-      </button>
+      </NavLink>
 
       <button className={`${baseClass} ${inactiveClass}`}>
         📄 Báo cáo
