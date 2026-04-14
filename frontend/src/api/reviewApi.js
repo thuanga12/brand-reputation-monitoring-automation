@@ -1,6 +1,6 @@
-import axios from "./axios";
+import axiosClient from "./axios";
 
-export const getReviewsHighland = async () => {
-  const res = await axios.get("/reviews-highland");
+export const getHighlandReviews = async (params = {}) => {
+  const res = await axiosClient.get("/reviews-highland", { params });
   return res.data;
 };
