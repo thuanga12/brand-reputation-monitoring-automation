@@ -12,7 +12,7 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
-          <Route path="/interaction" element={<InteractionPage />} />
+          <Route path="/ai-chat" element={<InteractionPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
