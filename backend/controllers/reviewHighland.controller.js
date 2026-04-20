@@ -2,35 +2,56 @@ import ReviewHighland from "../models/ReviewHighland.js";
 
 export const getHighlandReviews = async (req, res) => {
   try {
-    // 1. Lấy thêm các tham số filter từ req.query
+    // 1. Lấy tham số filter từ req.query
     const { page = 1, limit = 10, sentiment, category, is_crisis } = req.query;
 
-    // 2. Khởi tạo object query rỗng. Nếu frontend không gửi filter, nó sẽ lấy tất cả (như cũ).
+    // 2. Khởi tạo query lọc dữ liệu
     let query = {};
-
-    // 3. Đắp thêm điều kiện lọc nếu có dữ liệu gửi lên
     if (sentiment) query.sentiment = sentiment;
     if (category) query.category = category;
-    
-    // Xử lý is_crisis vì req.query luôn trả về chuỗi (string)
     if (is_crisis !== undefined && is_crisis !== '') {
       query.is_crisis = is_crisis === 'true'; 
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    // 3. LOGIC MỚI: Thống kê toàn bộ dữ liệu (không bị ảnh hưởng bởi limit/page)
+    // Điều này giúp bạn luôn có con số 97 (Churn Risk) cho dù đang ở trang nào
+    const [stats, items, total] = await Promise.all([
+      // Tính toán stats trên toàn bộ collection reviewshighland
+      ReviewHighland.aggregate([
+        {
+          $facet: {
+            churnRisk: [
+              { $match: { rating: { $lte: 2 } } },
+              { $count: "count" }
+            ],
+            highRetention: [
+              { $match: { rating: { $gte: 4 } } },
+              { $count: "count" }
+            ]
+          }
+        }
+      ]),
+      // Lấy danh sách review cho trang hiện tại
+      ReviewHighland.find(query)
+        .sort({ createdAt: -1 })
+        .skip((Number(page) - 1) * Number(limit))
+        .limit(Number(limit)),
+      // Tổng số bản ghi theo query lọc
+      ReviewHighland.countDocuments(query)
+    ]);
 
-    // 4. Truyền biến query vào hàm find()
-    const items = await ReviewHighland.find(query)
-      .sort({ createdAt: -1 }) // Bạn có thể cân nhắc đổi thành { published_at: -1 } nếu muốn xếp theo ngày review thực tế thay vì ngày lưu vào DB
-      .skip(skip)
-      .limit(Number(limit));
+    // Trích xuất số liệu từ aggregate
+    const churnRiskCount = stats[0].churnRisk[0]?.count || 0;
+    const highRetentionCount = stats[0].highRetention[0]?.count || 0;
 
-    // 5. Truyền biến query vào countDocuments() để tính tổng số trang chính xác sau khi lọc
-    const total = await ReviewHighland.countDocuments(query);
-
+    // 4. Trả về dữ liệu đầy đủ cho Frontend
     res.json({
       items,
       total,
+      stats: {
+        churnRisk: churnRiskCount,      // Đây sẽ là con số 97 bạn cần
+        highRetention: highRetentionCount
+      },
       page: Number(page),
       limit: Number(limit),
       totalPages: Math.ceil(total / Number(limit)),

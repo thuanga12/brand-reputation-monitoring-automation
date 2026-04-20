@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import app from "./app.js"; 
-import { connectDB } from "./config/db.js";
+import  connectDB  from "./config/db.js";
 import crmRoutes from "./routes/crm.route.js"; // Đã import
 
 
