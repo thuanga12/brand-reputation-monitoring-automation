@@ -10,37 +10,49 @@ const InteractionPage = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ churnRisk: 0, highRetention: 0 });
   const [selectedBranch, setSelectedBranch] = useState("Tất cả");
+  const [selectedRating, setSelectedRating] = useState("Tất cả");
 
   useEffect(() => {
     loadReviews();
   }, []);
 
   const loadReviews = async () => {
-    try {
-      setLoading(true);
-      const response = await getHighlandReviews();
-      const data = response.items || [];
-      setReviews(data.filter(r => r.reply_status !== 'approved'));
+  try {
+    setLoading(true);
+    // 1. Thêm tham số lấy nhiều dữ liệu hơn nếu API cho phép
+    const response = await getHighlandReviews({ limit: 1000, page: 1 }); 
+    
+    const data = response.items || [];
+    setReviews(data.filter(r => r.reply_status !== 'approved'));
 
-      if (response.stats) {
-        setStats({ 
-          churnRisk: response.stats.churnRisk,
-          highRetention: response.stats.highRetention 
-        });
-      }
-      setLoading(false);
-    } catch (err) {
-      console.error("Lỗi:", err);
-      toast.error("Không thể kết nối đến máy chủ!");
-      setLoading(false);
+    if (response.stats) {
+      setStats({ 
+        churnRisk: response.stats.churnRisk,      
+        highRetention: response.stats.highRetention 
+      });
     }
-  };
+    setLoading(false);
+  } catch (err) {
+    console.error("Lỗi:", err);
+    setLoading(false);
+  }
+};
 
-  const branches = ["Tất cả", ...new Set(reviews.map(item => item.branch_name || "Highlands Coffee"))];
-  const filteredReviews = selectedBranch === "Tất cả" 
-    ? reviews 
-    : reviews.filter(r => (r.branch_name || "Highlands Coffee") === selectedBranch);
+  // 1. Lấy danh sách chi nhánh (giữ nguyên logic cũ của bạn)
+  const branches = [
+    "Tất cả", 
+    ...new Set(reviews.map(item => item.address || "Chưa xác định"))
+  ];
+  // 2. Logic lọc kép: lọc theo Chi nhánh VÀ lọc theo Số sao
+    const filteredReviews = reviews.filter(r => {
+    // Lọc theo địa chỉ cửa hàng (address)
+    const branchMatch = selectedBranch === "Tất cả" || r.address === selectedBranch;
 
+    // Lọc theo số sao
+    const ratingMatch = selectedRating === "Tất cả" || Number(r.rating) === Number(selectedRating);
+    
+    return branchMatch && ratingMatch;
+  });
   const handleApprove = async (id) => {
     const textarea = document.getElementById(`reply-${id}`);
     const replyContent = textarea ? textarea.value : "";
@@ -98,7 +110,7 @@ const InteractionPage = () => {
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
-      {/* PHẦN BIỂU ĐỒ VÀ THỐNG KÊ (Workflow 4) */}
+      {/* PHẦN BIỂU ĐỒ VÀ THỐNG KÊ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center min-h-[200px]">
           <ResponsiveContainer width="100%" height={150}>
@@ -131,36 +143,53 @@ const InteractionPage = () => {
         </div>
       </div>
 
-     <div className="flex items-center justify-between mb-8">
+      {/* THANH CÔNG CỤ: TIÊU ĐỀ + BỘ LỌC + NÚT BẤM */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
           <span className="bg-[#B22830] text-white px-3 py-1 rounded-lg shadow-lg">CRM</span> 
-          Hộp thư tương tác ({filteredReviews.length})
+          Hộp thư ({filteredReviews.length})
         </h1>
 
-        <div className="flex gap-3">
-          {/* Nút Xuất Báo Cáo - Mới thêm vào */}
-          <button 
-            onClick={handleExportExcel}
-            className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 font-medium transition-all shadow-sm flex items-center gap-2"
-          >
-            📊 Xuất báo cáo
-          </button>
-
-          {/* Bộ lọc chi nhánh */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Lọc Sao */}
           <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Chi nhánh:</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase italic">Đánh giá:</span>
+            <select 
+              value={selectedRating}
+              onChange={(e) => setSelectedRating(e.target.value)}
+              className="text-sm font-bold outline-none bg-transparent cursor-pointer text-yellow-600"
+            >
+              <option value="Tất cả">Tất cả sao</option>
+              <option value="5">5 ★★★★★</option>
+              <option value="4">4 ★★★★</option>
+              <option value="3">3 ★★★</option>
+              <option value="2">2 ★★</option>
+              <option value="1">1 ★</option>
+            </select>
+          </div>
+
+          {/* Lọc Chi nhánh */}
+          <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
+            <span className="text-[10px] font-bold text-gray-400 uppercase italic">Chi nhánh:</span>
             <select 
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="text-sm font-bold outline-none bg-transparent cursor-pointer"
+              className="text-sm font-bold outline-none bg-transparent cursor-pointer text-slate-700 max-w-[150px]"
             >
               {branches.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           
           <button 
+            onClick={handleExportExcel}
+            className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 font-bold text-sm transition-all shadow-sm flex items-center gap-2"
+          >
+            📊 Xuất Excel
+          </button>
+
+          <button 
             onClick={loadReviews} 
-            className="bg-[#B22830] text-white px-4 py-2 rounded-lg hover:bg-red-800 font-medium transition-all shadow-sm"
+            className="bg-[#B22830] text-white px-4 py-2 rounded-lg hover:bg-red-800 font-bold text-sm transition-all shadow-sm flex items-center gap-2"
           >
             🔄 Làm mới
           </button>
@@ -171,14 +200,14 @@ const InteractionPage = () => {
         {filteredReviews.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-2xl border-2 border-dashed border-gray-200">
             <div className="text-5xl mb-4">📩</div>
-            <p className="text-gray-400 text-lg font-medium">Tuyệt vời! Bạn đã xử lý hết review.</p>
+            <p className="text-gray-400 text-lg font-medium">Không tìm thấy phản hồi nào khớp với bộ lọc.</p>
           </div>
         ) : (
           filteredReviews.map((item) => (
             <div key={item._id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:scale-[1.01] transition-all duration-300">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-red-50 text-red-700 rounded-full flex items-center justify-center font-bold text-lg border border-red-100">
+                  <div className="w-12 h-12 bg-red-50 text-red-700 rounded-full flex items-center justify-center font-bold text-lg border border-red-100 shadow-inner">
                     {item.author ? item.author.charAt(0) : "K"}
                   </div>
                   <div>
@@ -188,7 +217,9 @@ const InteractionPage = () => {
                         <span className="text-[9px] bg-red-600 text-white px-2 py-1 rounded-md uppercase font-black">Cảnh báo rủi ro</span>
                       )}
                     </h3>
-                    <p className="text-[10px] text-gray-400 font-medium">{item.published_at || "Vừa xong"}</p>
+                    <p className="text-[10px] text-gray-500 font-medium italic">
+                      📍 {item.address || "Highlands Coffee"} • {item.published_at || "Vừa xong"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-100 shadow-sm">
@@ -197,8 +228,8 @@ const InteractionPage = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-5 rounded-xl mb-6 border-l-4 border-slate-300 relative">
-                <div className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border border-gray-100 rounded">Nội dung khách hàng viết</div>
+              <div className="bg-slate-50 p-5 rounded-xl mb-6 border-l-4 border-slate-300 relative shadow-inner">
+                <div className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border border-gray-100 rounded">Nội dung review</div>
                 <p className="text-gray-700 italic text-sm leading-relaxed">"{item.review_text}"</p>
               </div>
 
