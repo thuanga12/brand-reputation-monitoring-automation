@@ -2,16 +2,20 @@ import mongoose from "mongoose";
 
 const crmSchema = new mongoose.Schema(
   {
-    customer_name: { type: String, required: true, unique: true },
-    total_reviews: { type: Number, default: 0 },
-    avg_rating: { type: Number, default: 0 },
-    churn_risk_rate: { type: Number, default: 0 }, // Tỉ lệ rủi ro rời bỏ (0-100)
-    loyalty_score: { type: Number, default: 0 },
+    branch_name: { type: String }, 
+    report_month: { type: String },
+    churn_risk_rate: { type: String }, // % rủi ro rời bỏ từ n8n
+    churn_reason: { type: String },
+    customer_segment: { type: String },
+    loyalty_hook: { type: String },
     retention_action: { type: String, default: "Chưa có đề xuất" },
     recovery_action: { type: String, default: "Chưa có đề xuất" },
-    last_interaction: { type: Date, default: Date.now }
   },
-  { timestamps: true }
+  { 
+    // Ép buộc Model này đọc đúng dữ liệu từ collection 'quantrikhachhang' mà n8n đã tạo
+    collection: 'quantrikhachhang', 
+    timestamps: true 
+  }
 );
 
 export default mongoose.model("CRM", crmSchema);
