@@ -1,6 +1,8 @@
 
 import ReviewHighland from "../models/ReviewHighland.js"; 
+import CRM from "../models/CRM.js";
 
+// API 1: Phê duyệt phản hồi
 export const approveReviewReply = async (req, res) => {
   const { id } = req.params;
   const { final_reply } = req.body;
@@ -25,6 +27,18 @@ export const approveReviewReply = async (req, res) => {
   } catch (error) {
     // Log lỗi ra để nếu có sai gì khác còn biết đường sửa
     console.error("Lỗi tại approveReviewReply:", error.message); 
+    res.status(500).json({ message: "Lỗi Server", error: error.message });
+  }
+};
+
+// API 2: Lấy dữ liệu chiến lược CRM (Churn risk, Recovery, Retention)
+// Nhiệm vụ của Bạn C: Trả về dữ liệu từ n8n cho Frontend
+export const getCRMStrategy = async (req, res) => {
+  try {
+    // Dùng Model CRM để lấy dữ liệu
+    const strategies = await CRM.find().sort({ createdAt: -1 });
+    res.status(200).json(strategies);
+  } catch (error) {
     res.status(500).json({ message: "Lỗi Server", error: error.message });
   }
 };
