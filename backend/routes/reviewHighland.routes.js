@@ -1,8 +1,14 @@
 import express from "express";
-import { getHighlandReviews } from "../controllers/reviewHighland.controller.js";
+// THÊM deleteReview VÀO ĐÂY
+import { getHighlandReviews, deleteReview } from "../controllers/reviewHighland.controller.js"; 
+import { verifyToken, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.get("/", getHighlandReviews);
+// User nào cũng được xem review
+router.get('/', verifyToken, getHighlandReviews);
+
+// Chỉ Admin mới được xóa review
+router.delete('/:id', verifyToken, authorize('admin'), deleteReview);
 
 export default router;

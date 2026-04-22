@@ -61,3 +61,18 @@ export const getHighlandReviews = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Hàm xóa review dành cho Admin
+export const deleteReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedReview = await ReviewHighland.findByIdAndDelete(id);
+
+    if (!deletedReview) {
+      return res.status(404).json({ message: "Không tìm thấy review để xóa" });
+    }
+
+    res.json({ message: "Đã xóa review thành công!" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
