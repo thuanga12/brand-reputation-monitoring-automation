@@ -5,12 +5,12 @@ import DashboardTable from "../../components/DashboardTable";
 import { getHighlandReviews } from "../../api/reviewApi";
 
 export default function DashboardPage() {
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState([]); 
+  const [allReviewsForFilter, setAllReviewsForFilter] = useState([]); 
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-
   const [pagination, setPagination] = useState({
     total: 0,
     totalPages: 0,
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState({
     sentiment: "",
     is_crisis: "",
+    address: "" // State lọc địa chỉ đồng bộ với server
   });
 
   useEffect(() => {
@@ -28,21 +29,25 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-        const res = await getHighlandReviews({
-          page,
-          limit,
-          ...(filters.sentiment ? { sentiment: filters.sentiment } : {}),
-          ...(filters.is_crisis !== "" ? { is_crisis: filters.is_crisis } : {}),
-        });
+        const [resPaging, resFull] = await Promise.all([
+          getHighlandReviews({
+            page,
+            limit,
+            ...(filters.sentiment ? { sentiment: filters.sentiment } : {}),
+            ...(filters.is_crisis !== "" ? { is_crisis: filters.is_crisis } : {}),
+            ...(filters.address ? { address: filters.address } : {}) // Gửi địa chỉ lên server
+          }),
+          getHighlandReviews({ limit: 1000 }) 
+        ]);
 
-        console.log("Highland reviews:", res);
-
-        setReviews(res.items || []);
+        setReviews(resPaging.items || []);
+        setAllReviewsForFilter(resFull.items || resFull || []);
+        
         setPagination({
-          total: res.total || 0,
-          totalPages: res.totalPages || 0,
-          page: res.page || 1,
-          limit: res.limit || 10,
+          total: resPaging.total || 0,
+          totalPages: resPaging.totalPages || 0,
+          page: resPaging.page || 1,
+          limit: resPaging.limit || 10,
         });
       } catch (error) {
         console.error("Lỗi load dashboard:", error);
@@ -54,77 +59,51 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [page, limit, filters]);
 
-  const stats = useMemo(() => {
-    const totalReviews = pagination.total;
+const stats = useMemo(() => {
+  // Ưu tiên tính trên 1000 mẫu để con số thống kê là khách quan nhất
+  const targetData = allReviewsForFilter.length > 0 ? allReviewsForFilter : reviews;
 
-    const positiveCount = reviews.filter(
-      (item) => item.sentiment === "Tích cực"
-    ).length;
+  const positiveCount = targetData.filter(item => item.sentiment === "Tích cực").length;
+  const neutralCount = targetData.filter(item => item.sentiment === "Trung lập").length;
+  const negativeCount = targetData.filter(item => item.sentiment === "Tiêu cực").length;
+  const crisisCount = targetData.filter(item => item.is_crisis === true).length;
 
-    const neutralCount = reviews.filter(
-      (item) => item.sentiment === "Trung lập"
-    ).length;
+  const positiveRate = targetData.length > 0 
+    ? ((positiveCount / targetData.length) * 100).toFixed(1) 
+    : 0;
 
-    const negativeCount = reviews.filter(
-      (item) => item.sentiment === "Tiêu cực"
-    ).length;
+  const avgRating = targetData.length > 0 
+    ? (targetData.reduce((sum, item) => sum + (item.rating || 0), 0) / targetData.length).toFixed(1) 
+    : 0;
 
-    const crisisCount = reviews.filter((item) => item.is_crisis).length;
+  return {
+    totalReviews: pagination.total, // Tổng từ DB
+    positiveCount, neutralCount, negativeCount, positiveRate, avgRating, crisisCount
+  };
+}, [allReviewsForFilter, reviews, pagination.total]);
 
-    const positiveRate =
-      reviews.length > 0
-        ? ((positiveCount / reviews.length) * 100).toFixed(1)
-        : 0;
-
-    const avgRating =
-      reviews.length > 0
-        ? (
-            reviews.reduce((sum, item) => sum + (item.rating || 0), 0) /
-            reviews.length
-          ).toFixed(1)
-        : 0;
-
-    return {
-      totalReviews,
-      positiveCount,
-      neutralCount,
-      negativeCount,
-      crisisCount,
-      positiveRate,
-      avgRating,
-    };
-  }, [reviews, pagination.total]);
-
-  const handlePrevPage = () => {
-    if (page > 1) setPage((prev) => prev - 1);
+  // Hàm xử lý khi thay đổi chi nhánh ở file con
+  const handleBranchChange = (newAddress) => {
+    setPage(1); // Reset về trang 1 khi lọc chi nhánh mới
+    setFilters(prev => ({ ...prev, address: newAddress }));
   };
 
-  const handleNextPage = () => {
-    if (page < pagination.totalPages) setPage((prev) => prev + 1);
-  };
+  const handlePrevPage = () => page > 1 && setPage(p => p - 1);
+  const handleNextPage = () => page < pagination.totalPages && setPage(p => p + 1);
 
-  if (loading) {
-    return <div className="p-6">Đang tải dữ liệu...</div>;
-  }
+  if (loading) return <div className="p-6 font-bold text-slate-400">ĐANG ĐỒNG BỘ HỆ THỐNG...</div>;
 
   return (
-    <div>
+    <div className="space-y-6">
       <DashboardStats stats={stats} />
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm mb-6">
-<div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-slate-600">Bộ lọc:</span>
-
-          <select
-            className="border border-slate-300 rounded-xl px-4 py-2 text-sm"
-            value={filters.sentiment}
-            onChange={(e) => {
-              setPage(1);
-              setFilters((prev) => ({
-                ...prev,
-                sentiment: e.target.value,
-              }));
-            }}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Bộ lọc:</span>
+          <select 
+            className="border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold outline-none"
+            value={filters.sentiment} 
+            onChange={(e) => { setPage(1); setFilters(f => ({...f, sentiment: e.target.value})); }}
           >
             <option value="">Tất cả cảm xúc</option>
             <option value="Tích cực">Tích cực</option>
@@ -162,33 +141,23 @@ export default function DashboardPage() {
           </select>
         </div>
       </div>
+<DashboardCharts allData={allReviewsForFilter} stats={stats} />
+      
+      {/* TRUYỀN THÊM PROPS LỌC XUỐNG FILE CON */}
+      <DashboardTable 
+        reviews={reviews} 
+        allData={allReviewsForFilter} 
+        currentBranch={filters.address} 
+        onBranchChange={handleBranchChange} 
+      />
 
-      <DashboardCharts reviews={reviews} stats={stats} />
-      <DashboardTable reviews={reviews} />
-
-      <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="text-sm text-slate-600">
-          Hiển thị trang <strong>{pagination.page}</strong> /{" "}
-          <strong>{pagination.totalPages}</strong> — Tổng{" "}
-          <strong>{pagination.total}</strong> review
+      <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex justify-between items-center">
+        <div className="text-sm text-slate-500 font-medium">
+          Trang {pagination.page} / {pagination.totalPages} — {pagination.total} Review
         </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrevPage}
-            disabled={page === 1}
-            className="px-4 py-2 rounded-xl border border-slate-300 text-sm disabled:opacity-50"
-          >
-            Trang trước
-          </button>
-
-          <button
-            onClick={handleNextPage}
-            disabled={page === pagination.totalPages}
-            className="px-4 py-2 rounded-xl bg-[#B22830] text-white text-sm disabled:opacity-50"
-          >
-            Trang sau
-          </button>
+        <div className="flex gap-2">
+          <button onClick={handlePrevPage} disabled={page === 1} className="px-4 py-2 border rounded-xl disabled:opacity-30">Trang trước</button>
+          <button onClick={handleNextPage} disabled={page === pagination.totalPages} className="px-4 py-2 bg-[#B22830] text-white rounded-xl disabled:opacity-30">Trang sau</button>
         </div>
       </div>
     </div>

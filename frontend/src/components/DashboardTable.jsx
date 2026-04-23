@@ -1,18 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { MapPin } from "lucide-react";
 
-// ===== Helpers =====
-
-/**
- * Tạo nhãn định danh duy nhất cho chi nhánh.
- * Sử dụng Title + Địa chỉ để tránh việc Highlands ở Q.1 bị gộp với Highlands Q.3
- */
-function getUniqueBranchLabel(row) {
-  if (!row) return "Không xác định";
-  const brandName = row.title || "Thương hiệu";
-  const addressShort = row.address ? row.address.split(',')[0].trim() : 'Địa chỉ lạ';
-  return `${brandName} (${addressShort})`;
-}
+// ===== Helpers (Đồng bộ từ cả 2 bản) =====
 
 function formatNumber(num) {
   if (!num) return "0";
@@ -33,6 +22,7 @@ function sentimentStyle(sentiment) {
   return "bg-slate-100 text-slate-600 border-slate-200";
 }
 
+// Lấy icon nguồn (Google/TikTok/Web)
 function getSourceIcon(source) {
   if (source?.toLowerCase().includes("google")) return "📍";
   if (source?.toLowerCase().includes("tiktok")) return "🎵";
@@ -41,34 +31,18 @@ function getSourceIcon(source) {
 
 // ===== Main Component =====
 
-export default function DashboardFeed({ reviews = [] }) {
-  const [selectedBranch, setSelectedBranch] = useState("Tất cả");
-
-  /**
-   * FIX CHÍNH: Lấy danh sách chi nhánh
-   * Dùng Map để đảm bảo mỗi Label (Tên + Địa chỉ) là duy nhất và không bị lọc mất dữ liệu
-   */
+export default function DashboardTable({ reviews = [], allData = [], currentBranch = "", onBranchChange }) {
+  
+  // 1. Lấy danh sách địa chỉ đầy đủ từ allData để hiện dropdown (Logic server-side)
   const branchList = useMemo(() => {
-    // Tạo Set để chứa các nhãn duy nhất
-    const branchSet = new Set();
-    reviews.forEach(r => {
-      branchSet.add(getUniqueBranchLabel(r));
-    });
-    
-    return ["Tất cả", ...Array.from(branchSet)].sort();
-  }, [reviews]);
-
-  /**
-   * Lọc danh sách reviews dựa trên chi nhánh được chọn
-   */
-  const filteredReviews = useMemo(() => {
-    if (selectedBranch === "Tất cả") return reviews;
-    return reviews.filter(r => getUniqueBranchLabel(r) === selectedBranch);
-  }, [selectedBranch, reviews]);
+    const sourceData = allData.length > 0 ? allData : reviews;
+    const addressSet = new Set(sourceData.map(r => r.address).filter(Boolean));
+    return ["Tất cả", ...Array.from(addressSet)].sort();
+  }, [allData, reviews]);
 
   return (
     <div className="space-y-6">
-      {/* FILTER BAR */}
+      {/* FILTER BAR - GIỮ GIAO DIỆN CỦA CODE DƯỚI */}
       <div className="bg-white p-5 border border-slate-200 rounded-[24px] flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4 flex-1">
           <div className="p-2 bg-slate-50 rounded-xl text-[#B22830]">
@@ -80,8 +54,8 @@ export default function DashboardFeed({ reviews = [] }) {
             </label>
             <select 
               className="bg-transparent text-slate-900 text-base font-bold outline-none cursor-pointer w-full border-b border-transparent focus:border-slate-200 transition-all"
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
+              value={currentBranch || "Tất cả"}
+              onChange={(e) => onBranchChange(e.target.value === "Tất cả" ? "" : e.target.value)}
             >
               {branchList.map(name => (
                 <option key={name} value={name}>{name}</option>
@@ -92,44 +66,33 @@ export default function DashboardFeed({ reviews = [] }) {
         
         <div className="text-right border-l pl-6 border-slate-100 hidden sm:block">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kết quả lọc</p>
-          <p className="text-sm font-bold text-slate-900">{filteredReviews.length} Feedbacks</p>
+          <p className="text-sm font-bold text-slate-900">{reviews.length} Feedbacks</p>
         </div>
       </div>
 
-      {/* FEED LIST */}
+      {/* FEED LIST - HIỂN THỊ TRỰC TIẾP REVIEWS TỪ CHA */}
       <div className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm">
-        {filteredReviews.length > 0 ? (
-          filteredReviews.map((row, index) => {
-            const rating = row.rating || 0;
-            const ratingPercent = (rating / 5) * 100;
-
+        {reviews.length > 0 ? (
+          reviews.map((row, index) => {
+            const ratingPercent = ((row.rating || 0) / 5) * 100;
             return (
-              <div
-                key={row.review_id || `review-${index}`}
-                className={`px-6 py-6 hover:bg-slate-50/50 transition-all ${
-                  index !== filteredReviews.length - 1 ? "border-b border-slate-100" : ""
-                }`}
-              >
+              <div key={index} className={`px-6 py-6 hover:bg-slate-50/50 transition-all ${index !== reviews.length - 1 ? "border-b border-slate-100" : ""}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
-                    {/* Avatar nguồn */}
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xl shadow-inner shrink-0">
+                    {/* Sử dụng getSourceIcon để phân biệt nguồn dữ liệu */}
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xl shrink-0 font-black shadow-inner">
                       {getSourceIcon(row.source)}
                     </div>
-
+                    
                     <div className="space-y-1">
-                      <h4 className="font-black text-base text-slate-900 leading-tight">
-                        {row.title}
-                      </h4>
-                      <p className="text-[13px] text-blue-600 font-bold flex items-center gap-1">
-                        📍 {row.address || "Địa chỉ chưa xác định"}
-                      </p>
-
-                      <div className="text-[12px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-medium">
-                        <span className="text-slate-700 font-bold">{row.author || "Khách hàng"}</span>
+                      <h4 className="font-black text-base text-slate-900 leading-tight">{row.title}</h4>
+                      <p className="text-[13px] text-blue-600 font-bold flex items-center gap-1">📍 {row.address}</p>
+                      
+                      <div className="text-[12px] text-slate-400 flex flex-wrap items-center gap-x-3 mt-2 font-medium">
+                        <span className="text-slate-700 font-bold">{row.author}</span>
                         <span>•</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-yellow-500 font-black">{rating}/5</span>
+                          <span className="text-yellow-500 font-black">{row.rating}/5</span>
                           <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-yellow-400" style={{ width: `${ratingPercent}%` }} />
                           </div>
@@ -139,18 +102,16 @@ export default function DashboardFeed({ reviews = [] }) {
                       </div>
                     </div>
                   </div>
-
                   <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border shrink-0 ${sentimentStyle(row.sentiment)}`}>
                     {row.sentiment || "Trung lập"}
                   </div>
                 </div>
 
-                {/* Nội dung Review */}
-                <div className="mt-4 sm:ml-[64px] text-slate-700 text-[14px] leading-relaxed font-medium bg-slate-50/70 p-4 rounded-2xl border border-slate-50">
-                  {row.review_text || "Không có nội dung đánh giá."}
+                <div className="mt-4 sm:ml-[64px] text-slate-700 text-[14px] leading-relaxed font-medium bg-slate-50/70 p-4 rounded-2xl border border-slate-100 italic">
+                  "{row.review_text || "Không có nội dung đánh giá."}"
                 </div>
 
-                {/* Like & Tag */}
+                {/* Bổ sung hiển thị Like và Category nếu có từ bản code 1 */}
                 <div className="mt-3 sm:ml-[64px] flex items-center justify-between">
                   <div className="flex items-center gap-6 text-xs font-bold text-slate-400">
                     <span className="flex items-center gap-1">👍 {formatNumber(row.like_count || 0)}</span>
@@ -165,8 +126,8 @@ export default function DashboardFeed({ reviews = [] }) {
             );
           })
         ) : (
-          <div className="py-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">
-            Không tìm thấy dữ liệu đánh giá
+          <div className="py-20 text-center text-slate-300 font-black uppercase text-xs">
+            Hệ thống không tìm thấy dữ liệu cho chi nhánh này
           </div>
         )}
       </div>

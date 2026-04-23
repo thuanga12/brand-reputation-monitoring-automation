@@ -2,8 +2,8 @@ import ReviewHighland from "../models/ReviewHighland.js";
 
 export const getHighlandReviews = async (req, res) => {
   try {
-    // 1. Lấy tham số filter từ req.query
-    const { page = 1, limit = 10, sentiment, category, is_crisis } = req.query;
+    // 1. Lấy thêm "address" từ req.query
+    const { page = 1, limit = 10, sentiment, category, is_crisis, address } = req.query;
 
     // 2. Khởi tạo query lọc dữ liệu
     let query = {};
@@ -13,10 +13,15 @@ export const getHighlandReviews = async (req, res) => {
       query.is_crisis = is_crisis === 'true'; 
     }
 
-    // 3. LOGIC MỚI: Thống kê toàn bộ dữ liệu (không bị ảnh hưởng bởi limit/page)
-    // Điều này giúp bạn luôn có con số 97 (Churn Risk) cho dù đang ở trang nào
+    // FIX CHỐT HẠ: Thêm lọc địa chỉ vào đây
+    if (address && address !== "" && address !== "Tất cả") {
+      query.address = address; 
+    }
+
+    // 3. Thực hiện song song: Thống kê và Lấy dữ liệu theo query đã lọc
     const [stats, items, total] = await Promise.all([
-      // Tính toán stats trên toàn bộ collection reviewshighland
+      // Stats này thường để hiện biểu đồ tổng, nên không cần filter theo address 
+      // (Hoặc nếu muốn biểu đồ cũng đổi theo địa chỉ thì thêm query vào $match)
       ReviewHighland.aggregate([
         {
           $facet: {
@@ -31,25 +36,23 @@ export const getHighlandReviews = async (req, res) => {
           }
         }
       ]),
-      // Lấy danh sách review cho trang hiện tại
+      // Lấy danh sách review TRANG HIỆN TẠI có áp dụng lọc địa chỉ
       ReviewHighland.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ published_at: -1 }) // Hoặc createdAt tùy schema của bạn
         .skip((Number(page) - 1) * Number(limit))
         .limit(Number(limit)),
-      // Tổng số bản ghi theo query lọc
+      // Tổng số bản ghi CỦA RIÊNG ĐỊA CHỈ ĐÓ để phân trang
       ReviewHighland.countDocuments(query)
     ]);
 
-    // Trích xuất số liệu từ aggregate
     const churnRiskCount = stats[0].churnRisk[0]?.count || 0;
     const highRetentionCount = stats[0].highRetention[0]?.count || 0;
 
-    // 4. Trả về dữ liệu đầy đủ cho Frontend
     res.json({
       items,
       total,
       stats: {
-        churnRisk: churnRiskCount,      // Đây sẽ là con số 97 bạn cần
+        churnRisk: churnRiskCount,
         highRetention: highRetentionCount
       },
       page: Number(page),
