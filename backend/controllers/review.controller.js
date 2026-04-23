@@ -1,22 +1,31 @@
 import Review from "../models/Review.js";
 
 // Lấy danh sách review kèm bộ lọc (Bạn A và Bạn B dùng)
+// Lấy danh sách review kèm bộ lọc (Bạn A và Bạn B dùng)
 export const getReviews = async (req, res) => {
   try {
-    const { sentiment, is_crisis, page = 1, limit = 10 } = req.query;
+    // 1. Thêm "address" vào để hứng dữ liệu từ Frontend gửi lên
+    const { sentiment, is_crisis, address, page = 1, limit = 10 } = req.query;
 
     const query = {};
+    
     if (sentiment) query.sentiment = sentiment;
     
-    // Sửa logic query Boolean để đảm bảo lọc đúng
-    if (is_crisis !== undefined) {
+    if (is_crisis !== undefined && is_crisis !== "") {
       query.is_crisis = is_crisis === "true";
+    }
+
+    // 2. FIX CHỐT HẠ: Thêm điều kiện lọc theo địa chỉ vào query của MongoDB
+    // Nếu có địa chỉ và không phải là "Tất cả" thì mới lọc
+    if (address && address !== "" && address !== "Tất cả") {
+      query.address = address; 
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
+    // 3. Thực hiện truy vấn với query đã có address
     const items = await Review.find(query)
-      .sort({ createdAt: -1 }) // Ưu tiên review mới nhất lên đầu
+      .sort({ published_at: -1 }) // Thường field này trong DB của bạn là published_at hoặc createdAt
       .skip(skip)
       .limit(Number(limit));
 
