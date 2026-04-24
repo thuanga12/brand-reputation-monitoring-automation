@@ -35,10 +35,23 @@ export const approveReviewReply = async (req, res) => {
 // Nhiệm vụ của Bạn C: Trả về dữ liệu từ n8n cho Frontend
 export const getCRMStrategy = async (req, res) => {
   try {
-    // Dùng Model CRM để lấy dữ liệu
-    const strategies = await CRM.find().sort({ createdAt: -1 });
-    res.status(200).json(strategies);
+    // Thêm timeout để không bị treo server
+    const strategy = await CRM.findOne().sort({ _id: -1 }).lean().maxTimeMS(5000);
+
+    if (!strategy) {
+      return res.status(200).json({
+        churn_reason: "Chưa có dữ liệu",
+        recovery_action: "N/A",
+        loyalty_hook: "N/A",
+        retention_action: "N/A",
+        churn_risk_rate: "0%"
+      });
+    }
+
+    res.status(200).json(strategy);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi Server", error: error.message });
+    console.error("Lỗi Backend CRM:", error.message);
+    // Trả về lỗi chi tiết để Frontend biết đường xử lý
+    res.status(500).json({ message: "Lỗi kết nối Database", detail: error.message });
   }
 };
