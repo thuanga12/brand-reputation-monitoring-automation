@@ -11,7 +11,7 @@ const InteractionPage = () => {
   const [stats, setStats] = useState({ churnRisk: 0, highRetention: 0 });
   const [selectedBranch, setSelectedBranch] = useState("Tất cả");
   const [selectedRating, setSelectedRating] = useState("Tất cả");
-
+  const [aiStrategy, setAiStrategy] = useState(null);
   useEffect(() => {
     loadReviews();
   }, []);
@@ -37,12 +37,7 @@ const loadReviews = async () => {
 
     // LẤY DỮ LIỆU THẬT: Map đúng các trường từ collection 'quantrikhachhang'
     if (aiRes) {
-      setAiStrategy({
-        churn_reason: aiRes.churn_reason,     // Khớp với DB: "Chất lượng dịch vụ giảm sút..."
-        recovery_action: aiRes.recovery_action, // Khớp với DB: "Gửi tặng Voucher..."
-        loyalty_hook: aiRes.loyalty_hook,       // Khớp với DB: "Sự ổn định về hương vị..."
-        retention_action: aiRes.retention_action // Khớp với DB: "Triển khai chiến dịch..."
-      });
+     setAiStrategy(aiRes);
     }
 
     setLoading(false);
