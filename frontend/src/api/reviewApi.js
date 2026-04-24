@@ -31,3 +31,13 @@ export const getAllReviews = async (params = {}) => {
   const res = await axiosClient.get("/reviews", { params }); 
   return res.data;
 };
+// Hàm lấy phân tích chiến lược từ AI
+export const getAIAnalysis = async () => {
+  try {
+    const response = await axiosClient.get('/crm/strategy'); 
+    return response.data; 
+  } catch (error) {
+    console.error("Lỗi gọi API AI Analysis:", error);
+    return null;
+  }
+};

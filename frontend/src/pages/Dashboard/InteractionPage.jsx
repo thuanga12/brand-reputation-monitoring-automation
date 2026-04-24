@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from 'xlsx';
-import { getHighlandReviews, approveReviewReply } from "../../api/reviewApi";
-import { toast } from 'react-hot-toast'; // QUAN TRỌNG: Cần import cái này
+import { getHighlandReviews, approveReviewReply, getAIAnalysis } from "../../api/reviewApi";
+import { toast } from 'react-hot-toast'; 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const InteractionPage = () => {
@@ -16,24 +16,39 @@ const InteractionPage = () => {
     loadReviews();
   }, []);
 
-  const loadReviews = async () => {
+const loadReviews = async () => {
   try {
     setLoading(true);
-    // 1. Thêm tham số lấy nhiều dữ liệu hơn nếu API cho phép
-    const response = await getHighlandReviews({ limit: 1000, page: 1 }); 
     
-    const data = response.items || [];
-    setReviews(data.filter(r => r.reply_status !== 'approved'));
+    // Gọi song song: 1 cái lấy danh sách review, 1 cái lấy phân tích CRM mới nhất từ DB
+    const [reviewRes, aiRes] = await Promise.all([
+      getHighlandReviews({ limit: 1000, page: 1 }),
+      getAIAnalysis() 
+    ]);
 
-    if (response.stats) {
-      setStats({ 
-        churnRisk: response.stats.churnRisk,      
-        highRetention: response.stats.highRetention 
+    // Cập nhật danh sách reviews (loại bỏ những cái đã duyệt)
+    setReviews((reviewRes.items || []).filter(r => r.reply_status !== 'approved'));
+
+    // Cập nhật thống kê thực tế cho biểu đồ
+    setStats({ 
+      churnRisk: reviewRes.stats?.churnRisk || 0, 
+      highRetention: reviewRes.stats?.highRetention || 0 
+    });
+
+    // LẤY DỮ LIỆU THẬT: Map đúng các trường từ collection 'quantrikhachhang'
+    if (aiRes) {
+      setAiStrategy({
+        churn_reason: aiRes.churn_reason,     // Khớp với DB: "Chất lượng dịch vụ giảm sút..."
+        recovery_action: aiRes.recovery_action, // Khớp với DB: "Gửi tặng Voucher..."
+        loyalty_hook: aiRes.loyalty_hook,       // Khớp với DB: "Sự ổn định về hương vị..."
+        retention_action: aiRes.retention_action // Khớp với DB: "Triển khai chiến dịch..."
       });
     }
+
     setLoading(false);
   } catch (err) {
-    console.error("Lỗi:", err);
+    console.error("Lỗi đồng bộ dữ liệu thật:", err);
+    toast.error("Không thể lấy dữ liệu phân tích mới nhất");
     setLoading(false);
   }
 };
@@ -142,6 +157,41 @@ const InteractionPage = () => {
           <p className="text-[11px] text-green-700 bg-green-50 p-2 rounded">Duy trì tương tác & ưu đãi thẻ thành viên.</p>
         </div>
       </div>
+
+      {/* --- PHẦN CHIẾN LƯỢC CRM TỪ AI THẬT --- */}
+      {aiStrategy ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-in fade-in duration-500">
+          <div className="bg-white p-5 rounded-2xl border-t-4 border-red-500 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="p-2 bg-red-100 rounded-lg text-xl">🎯</span>
+              <div>
+                <h5 className="text-red-900 font-black uppercase text-[11px] tracking-widest">Chiến dịch giải cứu (Recovery)</h5>
+                <p className="text-[10px] text-gray-500 font-bold italic">Lý do: {aiStrategy.churn_reason}</p>
+              </div>
+            </div>
+            <div className="bg-red-50/50 p-4 rounded-xl border border-red-100">
+              <p className="text-gray-700 text-sm leading-relaxed font-semibold italic">"{aiStrategy.recovery_action}"</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border-t-4 border-green-500 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="p-2 bg-green-100 rounded-lg text-xl">💎</span>
+              <div>
+                <h5 className="text-green-900 font-black uppercase text-[11px] tracking-widest">Chiến dịch trung thành (Retention)</h5>
+                <p className="text-[10px] text-gray-500 font-bold italic">Động lực: {aiStrategy.loyalty_hook}</p>
+              </div>
+            </div>
+            <div className="bg-green-50/50 p-4 rounded-xl border border-green-100">
+              <p className="text-gray-700 text-sm leading-relaxed font-semibold italic">"{aiStrategy.retention_action}"</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm font-bold">
+          ⚠️ Đang đợi AI phân tích dữ liệu mới nhất từ DB...
+        </div>
+      )}
 
       {/* THANH CÔNG CỤ: TIÊU ĐỀ + BỘ LỌC + NÚT BẤM */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
