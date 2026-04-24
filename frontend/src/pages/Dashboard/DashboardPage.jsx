@@ -25,63 +25,80 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // FIX CỰC QUAN TRỌNG: Chuẩn hóa dữ liệu trước khi gửi lên API
+      const apiFilters = {
+        // Chuyển sang chữ thường để khớp với MongoDB (tích cực, tiêu cực...)
+        ...(filters.sentiment ? { sentiment: filters.sentiment.toLowerCase() } : {}),
+        // Chuyển chuỗi "true"/"false" từ select thành Boolean thực sự cho DB
+        ...(filters.is_crisis !== "" ? { is_crisis: filters.is_crisis === "true" } : {}),
+        ...(filters.address ? { address: filters.address } : {})
+      };
 
-        const [resPaging, resFull] = await Promise.all([
-          getHighlandReviews({
-            page,
-            limit,
-            ...(filters.sentiment ? { sentiment: filters.sentiment } : {}),
-            ...(filters.is_crisis !== "" ? { is_crisis: filters.is_crisis } : {}),
-            ...(filters.address ? { address: filters.address } : {}) // Gửi địa chỉ lên server
-          }),
-          getHighlandReviews({ limit: 1000 }) 
-        ]);
+      const [resPaging, resFull] = await Promise.all([
+        getHighlandReviews({
+          page,
+          limit,
+          ...apiFilters 
+        }),
+        getHighlandReviews({ 
+          limit: 1000, 
+          // Chỉ lọc theo địa chỉ để Stats/Biểu đồ luôn có đủ data 3 màu cảm xúc
+          ...(filters.address ? { address: filters.address } : {})
+        }) 
+      ]);
 
-        setReviews(resPaging.items || []);
-        setAllReviewsForFilter(resFull.items || resFull || []);
-        
-        setPagination({
-          total: resPaging.total || 0,
-          totalPages: resPaging.totalPages || 0,
-          page: resPaging.page || 1,
-          limit: resPaging.limit || 10,
-        });
-      } catch (error) {
-        console.error("Lỗi load dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setReviews(resPaging.items || []);
+      setAllReviewsForFilter(resFull.items || resFull || []);
+      
+      setPagination({
+        total: resPaging.total || 0,
+        totalPages: resPaging.totalPages || 0,
+        page: resPaging.page || 1,
+        limit: resPaging.limit || 10,
+      });
+    } catch (error) {
+      console.error("Lỗi load dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchDashboardData();
-  }, [page, limit, filters]);
+  fetchDashboardData();
+}, [page, limit, filters]);
 
 const stats = useMemo(() => {
-  // Ưu tiên tính trên 1000 mẫu để con số thống kê là khách quan nhất
+  // Luôn ưu tiên tính trên tập data 1000 mẫu để stats khách quan nhất
   const targetData = allReviewsForFilter.length > 0 ? allReviewsForFilter : reviews;
 
-  const positiveCount = targetData.filter(item => item.sentiment === "Tích cực").length;
-  const neutralCount = targetData.filter(item => item.sentiment === "Trung lập").length;
-  const negativeCount = targetData.filter(item => item.sentiment === "Tiêu cực").length;
-  const crisisCount = targetData.filter(item => item.is_crisis === true).length;
+  // Helper đếm không phân biệt hoa thường và khoảng trắng
+  const countBySentiment = (type) => 
+    targetData.filter(item => (item.sentiment || "").toString().toLowerCase().trim() === type).length;
 
-  const positiveRate = targetData.length > 0 
-    ? ((positiveCount / targetData.length) * 100).toFixed(1) 
-    : 0;
+  const positiveCount = countBySentiment("tích cực");
+  const neutralCount = countBySentiment("trung lập");
+  const negativeCount = countBySentiment("tiêu cực");
 
-  const avgRating = targetData.length > 0 
-    ? (targetData.reduce((sum, item) => sum + (item.rating || 0), 0) / targetData.length).toFixed(1) 
+  // Đếm Crisis chuẩn (chấp nhận cả Boolean true và String "true")
+  const crisisCount = targetData.filter(item => 
+    item.is_crisis === true || String(item.is_crisis).toLowerCase() === "true"
+  ).length;
+
+  const total = targetData.length;
+  const positiveRate = total > 0 ? ((positiveCount / total) * 100).toFixed(1) : 0;
+
+  const avgRating = total > 0 
+    ? (targetData.reduce((sum, item) => sum + (Number(item.rating) || 0), 0) / total).toFixed(1) 
     : 0;
 
   return {
-    totalReviews: pagination.total, // Tổng từ DB
+    totalReviews: pagination.total,
     positiveCount, neutralCount, negativeCount, positiveRate, avgRating, crisisCount
   };
 }, [allReviewsForFilter, reviews, pagination.total]);
-
   // Hàm xử lý khi thay đổi chi nhánh ở file con
   const handleBranchChange = (newAddress) => {
     setPage(1); // Reset về trang 1 khi lọc chi nhánh mới
