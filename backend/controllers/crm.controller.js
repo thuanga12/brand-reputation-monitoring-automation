@@ -55,3 +55,36 @@ export const getCRMStrategy = async (req, res) => {
     res.status(500).json({ message: "Lỗi kết nối Database", detail: error.message });
   }
 };
+// API 3: Lấy toàn bộ dữ liệu CRM để làm trang Báo cáo
+export const getCRMReports = async (req, res) => {
+  try {
+    const { month, branch } = req.query;
+
+    const filter = {};
+
+    if (month && month !== "all") {
+      filter.report_month = month;
+    }
+
+    if (branch && branch !== "all") {
+      filter.branch_name = branch;
+    }
+
+    const reports = await CRM.find(filter)
+      .sort({ report_month: -1, branch_name: 1 })
+      .lean()
+      .maxTimeMS(5000);
+
+    res.status(200).json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    console.error("Lỗi lấy dữ liệu báo cáo CRM:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi lấy dữ liệu báo cáo CRM",
+      detail: error.message,
+    });
+  }
+};
