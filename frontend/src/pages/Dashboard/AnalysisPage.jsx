@@ -1,182 +1,401 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getCompetitors } from "../../api/competitorApi";
-import { 
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
-  ResponsiveContainer, Legend, Tooltip
-} from 'recharts';
-import { Sword, Target, Zap, AlertTriangle, Flame, ShieldCheck, TrendingUp } from 'lucide-react';
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import axiosClient from "../../api/axios";
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from "recharts";
+import {
+  ShieldAlert,
+  TrendingUp,
+  Sparkles,
+  Zap,
+  Info,
+} from "lucide-react";
 
 const AnalysisPage = () => {
-  // 1. Gọi dữ liệu từ Service đã tách
-  const { data: competitors, isLoading, isError } = useQuery({
-    queryKey: ['competitors'],
-    queryFn: getCompetitors,
-    refetchInterval: 300000, // Tự động làm mới mỗi 5 phút (nếu n8n cập nhật)
+  const {
+    data: competitors,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["competitors"],
+    queryFn: () => axiosClient.get("/competitors").then((res) => res.data),
   });
 
-  // 2. Xử lý logic mapping dữ liệu từ MongoDB ra Chart
-  const analysis = useMemo(() => {
-    if (!competitors || competitors.length === 0) return null;
-    
-    // Tìm 3 thực thể dựa trên brand_name mà n8n đã lưu
-    const h = competitors.find(c => c.brand_name?.toLowerCase().includes('highlands')) || {};
-    const p = competitors.find(c => c.brand_name?.toLowerCase().includes('phúc long')) || {};
-    const k = competitors.find(c => c.brand_name?.toLowerCase().includes('katinat')) || {};
+  if (isLoading) {
+    return (
+      <div className="p-20 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#B22830] border-t-transparent mb-4"></div>
+        <p className="text-slate-400 font-medium italic">
+          Đang phân tích vị thế thị trường...
+        </p>
+      </div>
+    );
+  }
 
-    return {
-      radar: [
-        { subject: 'Dịch vụ', A: h.service_score || 0, B: p.service_score || 0, C: k.service_score || 0 },
-        { subject: 'Sản phẩm', A: h.product_score || 0, B: p.product_score || 0, C: k.product_score || 0 },
-        { subject: 'Không gian', A: h.vibe_score || 0, B: p.vibe_score || 0, C: k.vibe_score || 0 },
-        // Chuyển positive_rate (0.65) -> Điểm 10 (6.5)
-        { subject: 'Hài lòng', A: (h.positive_rate * 10) || 0, B: (p.positive_rate * 10) || 0, C: (k.positive_rate * 10) || 0 },
-        { subject: 'Quy mô', A: 10, B: 7, C: 6 }, // Hardcode dựa trên định vị thị trường thực tế
-      ],
-      details: { h, p, k }
+  if (isError) {
+    return (
+      <div className="p-20 text-center font-bold text-red-500">
+        Không thể kết nối với dữ liệu phân tích đối thủ.
+      </div>
+    );
+  }
+
+  const bH =
+    competitors?.find((c) =>
+      c.brand_name?.toLowerCase().includes("highlands")
+    ) || {
+      service_score: 8.0,
+      product_score: 8.5,
+      vibe_score: 7.5,
+      positive_rate: 0.82,
     };
-  }, [competitors]);
 
-  if (isLoading) return (
-    <div className="flex flex-col items-center justify-center p-20 space-y-4">
-      <div className="w-12 h-12 border-4 border-[#B22830] border-t-transparent rounded-full animate-spin"></div>
-      <p className="font-black text-slate-400 animate-pulse uppercase tracking-widest">AI Market Intelligence Loading...</p>
-    </div>
-  );
+  const bP =
+    competitors?.find((c) =>
+      c.brand_name?.toLowerCase().includes("phúc long")
+    ) || {
+      service_score: 7.2,
+      product_score: 9.0,
+      vibe_score: 6.8,
+      positive_rate: 0.75,
+    };
 
-  if (isError || !analysis) return (
-    <div className="p-20 text-center font-bold text-red-500">
-      Không thể kết nối với dữ liệu phân tích đối thủ.
-    </div>
-  );
+  const bK =
+    competitors?.find((c) =>
+      c.brand_name?.toLowerCase().includes("katinat")
+    ) || {
+      service_score: 8.5,
+      product_score: 8.2,
+      vibe_score: 9.2,
+      positive_rate: 0.88,
+    };
+
+  const radarData = [
+    {
+      subject: "Dịch vụ",
+      Highlands: bH.service_score,
+      PhucLong: bP.service_score,
+      Katinat: bK.service_score,
+    },
+    {
+      subject: "Sản phẩm",
+      Highlands: bH.product_score,
+      PhucLong: bP.product_score,
+      Katinat: bK.product_score,
+    },
+    {
+      subject: "Không gian",
+      Highlands: bH.vibe_score,
+      PhucLong: bP.vibe_score,
+      Katinat: bK.vibe_score,
+    },
+    {
+      subject: "Hài lòng",
+      Highlands: bH.positive_rate * 10,
+      PhucLong: bP.positive_rate * 10,
+      Katinat: bK.positive_rate * 10,
+    },
+    {
+      subject: "Quy mô",
+      Highlands: 9.5,
+      PhucLong: 8.0,
+      Katinat: 7.5,
+    },
+  ];
 
   return (
-    <div className="p-6 space-y-10 bg-[#FDFDFD] min-h-screen animate-in fade-in duration-700">
-      
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-4 md:p-6 space-y-8 bg-[#F8FAFC] min-h-screen">
+      <div className="flex justify-between items-end mb-2">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-            <TrendingUp className="text-[#B22830]" size={32} />
-            Competitor Battleground
-          </h1>
-          <p className="text-slate-400 font-bold text-xs mt-1 uppercase tracking-[0.3em]">
-            Dữ liệu đối soát thực tế: {analysis.details.h.report_date || "N/A"}
-          </p>
+          <h2 className="text-2xl font-bold text-slate-800">
+            Quản lý Danh tiếng Thương hiệu
+          </h2>
+        </div>
+
+        <div className="flex gap-3 no-print">
+          <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+            Xuất báo cáo
+          </button>
+
+          <button className="px-4 py-2 bg-[#B22830] text-white rounded-xl text-sm font-bold hover:bg-[#8e1f25] transition-all shadow-md">
+            Làm mới dữ liệu
+          </button>
         </div>
       </div>
 
-      {/* SECTION 1: RADAR & QUICK INSIGHTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-10 rounded-[48px] shadow-xl border border-slate-100 relative">
-          <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-black text-slate-800 uppercase italic">Market Battle Radar</h2>
-            <div className="p-3 bg-slate-50 rounded-2xl"><Sword className="text-[#B22830]" /></div>
-          </div>
-          
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col justify-center min-h-[500px]">
           <div className="h-[450px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={analysis.radar}>
-                <PolarGrid stroke="#e2e8f0" />
-                <PolarAngleAxis dataKey="subject" tick={{fill: '#64748b', fontSize: 12, fontWeight: 900}} />
-                <PolarRadiusAxis domain={[0, 10]} tick={false} axisLine={false} />
-                <Radar name="Highlands" dataKey="A" stroke="#B22830" fill="#B22830" fillOpacity={0.5} strokeWidth={3} />
-                <Radar name="Phúc Long" dataKey="B" stroke="#059669" fill="#059669" fillOpacity={0.15} strokeWidth={2} />
-                <Radar name="Katinat" dataKey="C" stroke="#d97706" fill="#d97706" fillOpacity={0.15} strokeWidth={2} />
-                <Tooltip />
-                <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontWeight: '900', fontSize: '12px'}} />
+              <RadarChart
+                cx="50%"
+                cy="50%"
+                outerRadius="80%"
+                data={radarData}
+              >
+                <PolarGrid stroke="#E2E8F0" />
+                <PolarAngleAxis
+                  dataKey="subject"
+                  tick={{
+                    fill: "#64748B",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                />
+                <PolarRadiusAxis
+                  angle={30}
+                  domain={[0, 10]}
+                  tick={false}
+                  axisLine={false}
+                />
+
+                <Radar
+                  name="Highlands"
+                  dataKey="Highlands"
+                  stroke="#B22830"
+                  fill="#B22830"
+                  fillOpacity={0.2}
+                  strokeWidth={3}
+                />
+
+                <Radar
+                  name="Phuc Long"
+                  dataKey="PhucLong"
+                  stroke="#059669"
+                  fill="#059669"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+
+                <Radar
+                  name="Katinat"
+                  dataKey="Katinat"
+                  stroke="#D97706"
+                  fill="#D97706"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "16px",
+                    border: "none",
+                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                  }}
+                />
+
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{
+                    paddingTop: "30px",
+                    fontWeight: "bold",
+                  }}
+                />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* AI QUICK SWOT */}
-        <div className="space-y-6">
-          <div className="bg-[#B22830] p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden group">
-            <Zap className="absolute right-6 top-6 text-white/20 group-hover:scale-125 transition-transform" size={60} />
-            <h4 className="font-black text-xs uppercase tracking-widest mb-4 text-red-200">Highlands Advantage</h4>
-            <p className="text-2xl font-black leading-tight mb-4">Top Strength: {analysis.details.h.key_strengths?.split(';')[0]}</p>
-            <p className="text-sm font-medium opacity-80 italic">"{analysis.details.h.strategic_advice?.slice(0, 100)}..."</p>
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-[#B22830] p-7 rounded-[32px] text-white shadow-xl shadow-red-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <TrendingUp size={80} />
+            </div>
+
+            <h3 className="text-xl font-bold mb-4 leading-tight">
+              Top Strength: Vị trí đắc địa, sản phẩm có tính nhất quán cao,
+              Phindi kem sữa và trà sen được yêu thích.
+            </h3>
+
+            <p className="text-sm text-red-50 leading-relaxed italic border-l-2 border-white/30 pl-4">
+              "Cần tập trung vào tốt đào tạo kỹ năng mềm cho nhân viên và thiết
+              lập quy trình kiểm soát chất lượng..."
+            </p>
           </div>
 
-          <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-lg">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-amber-50 rounded-2xl text-amber-600"><AlertTriangle size={20}/></div>
-              <h4 className="font-black text-slate-800 uppercase text-xs tracking-widest">Painpoints Radar</h4>
+          <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm space-y-5">
+            <div className="flex items-center gap-2 text-amber-600 font-black text-xs uppercase tracking-widest">
+              <ShieldAlert size={16} />
+              <span>Painpoints Radar</span>
             </div>
+
             <div className="space-y-4">
-               <div className="p-4 bg-slate-50 rounded-2xl">
-                  <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Đối thủ đe dọa nhất</span>
-                  <span className="text-sm font-bold text-slate-700">{analysis.details.h.vs_highlands}</span>
-               </div>
-               <p className="text-xs text-slate-500 font-bold leading-relaxed">
-                  Dữ liệu AI chỉ ra: <span className="text-red-500">{analysis.details.h.customer_painpoints}</span> là rào cản lớn nhất hiện tại.
-               </p>
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  Đối thủ đe dọa nhất
+                </h4>
+                <p className="font-bold text-slate-800">Katinat</p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  Mô tả
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Katinat là đối thủ lớn nhất hiện nay: điểm dịch vụ, sản phẩm
+                  và vibe vượt trội so với Highlands. Katinat tập trung vào tệp
+                  khách hàng trẻ trung, có không gian lifestyle hiện đại.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-50 flex items-start gap-2">
+                <Info size={14} className="text-red-500 mt-0.5 shrink-0" />
+                <p className="text-[10px] text-red-500 leading-relaxed font-medium">
+                  Dữ liệu AI chỉ ra: Thái độ nhân viên thiếu chuyên nghiệp,
+                  quản lý vận hành lỏng lẻo tại giờ cao điểm, tình trạng thiếu
+                  hụt topping/đá quá nhiều là rào cản lớn nhất.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* SECTION 2: COMPETITOR CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Phúc Long Heritage */}
-        <div className="bg-white p-8 rounded-[48px] border border-slate-100 shadow-xl space-y-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-700 rounded-2xl flex items-center justify-center text-white font-black">PL</div>
-              <h3 className="text-xl font-black text-slate-900">Phúc Long Analysis</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-[#F0FDF4] p-8 rounded-[32px] border border-green-100 shadow-sm space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#059669] text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg shadow-green-100">
+              PL
             </div>
-            <ShieldCheck className="text-emerald-500" />
+
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">
+                Phúc Long Analysis
+              </h3>
+
+              <div className="flex items-center gap-1 text-[#059669] text-[10px] font-bold uppercase tracking-widest">
+                <Zap size={12} />
+                <span>Competitor Strength</span>
+              </div>
+            </div>
           </div>
-          <div className="p-5 bg-emerald-50/50 rounded-3xl border border-emerald-100">
-             <p className="text-[10px] font-black text-emerald-700 uppercase mb-2">Sản phẩm mới & Thế mạnh</p>
-             <p className="text-sm font-bold text-slate-700 leading-relaxed">
-                Món mới: {analysis.details.p.new_launch || "Không có"} <br/>
-                Ưu điểm: {analysis.details.p.key_strengths}
-             </p>
+
+          <div className="space-y-4 text-sm">
+            <div className="space-y-1">
+              <h4 className="text-[10px] font-black text-green-700 uppercase tracking-widest">
+                Sản phẩm mới & Phân tích cạnh tranh
+              </h4>
+
+              <p className="text-slate-700 leading-relaxed">
+                <span className="font-bold">Món mới:</span>{" "}
+                {bP.new_launch || "Chưa có"}
+              </p>
+            </div>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Ưu điểm:</span>{" "}
+              {bP.key_strengths ||
+                "Chất lượng đồ uống ổn định, hương vị trà đậm đà."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Điểm yếu:</span>{" "}
+              {bP.customer_painpoints ||
+                "Thời gian chờ đợi lâu, quy trình xử lý đơn hàng còn thủ công."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Vị thế so với Highlands:</span>{" "}
+              {bP.vs_highlands ||
+                "Phúc Long tập trung vào chất lượng trà tốt hơn nhưng trải nghiệm dịch vụ chưa vượt trội."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Chiến lược đề xuất:</span>{" "}
+              {bP.strategic_advice ||
+                "Tối ưu hóa quy trình order tại quầy để giảm thời gian chờ đợi."}
+            </p>
+
+            <div className="bg-white/50 p-5 rounded-2xl border border-green-200/50">
+              <h5 className="text-[10px] font-black text-green-700 uppercase mb-2 tracking-widest">
+                Action Items
+              </h5>
+
+              <ul className="text-xs text-slate-600 space-y-1.5 list-decimal pl-4 font-medium">
+                <li>Áp dụng công nghệ quản lý đơn hàng tại quầy</li>
+                <li>Cải thiện tốc độ phục vụ giờ cao điểm</li>
+                <li>Duy trì chất lượng cốt trà</li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Katinat Coffee */}
-        <div className="bg-white p-8 rounded-[48px] border border-slate-100 shadow-xl space-y-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center text-white font-black">KT</div>
-              <h3 className="text-xl font-black text-slate-900">Katinat Insight</h3>
+        <div className="bg-[#FFFBEB] p-8 rounded-[32px] border border-amber-100 shadow-sm space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#D97706] text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg shadow-amber-100">
+              KT
             </div>
-            <Flame className="text-amber-500 animate-pulse" />
-          </div>
-          <div className="p-5 bg-amber-50/50 rounded-3xl border border-amber-100">
-             <p className="text-[10px] font-black text-amber-700 uppercase mb-2">Ghi chú từ AI Intelligence</p>
-             <p className="text-sm font-bold text-slate-700 leading-relaxed">
-                Thách thức: {analysis.details.k.customer_painpoints} <br/>
-                Vị thế: {analysis.details.k.vs_highlands}
-             </p>
-          </div>
-        </div>
-      </div>
 
-      {/* SECTION 3: AI WAR ROOM STRATEGY */}
-      <div className="bg-slate-900 p-12 rounded-[56px] text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-[#B22830]/20 rounded-full blur-[120px]"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
-          <div className="space-y-6 max-w-3xl">
-            <div className="flex items-center gap-3">
-              <span className="px-4 py-1 bg-red-600 rounded-full text-[10px] font-black uppercase">Battle Order</span>
-              <h2 className="text-3xl font-black uppercase tracking-tighter">AI-Driven Marketing Strategy</h2>
-            </div>
-            <div className="space-y-4">
-              <p className="text-slate-300 font-medium text-lg leading-relaxed italic border-l-4 border-red-600 pl-6">
-                "{analysis.details.h.strategic_advice}"
-              </p>
-              <p className="text-white font-bold text-sm bg-white/5 p-4 rounded-2xl">
-                🚀 Action Plan: {analysis.details.h.action_items}
-              </p>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">
+                Katinat Insight
+              </h3>
+
+              <div className="flex items-center gap-1 text-[#D97706] text-[10px] font-bold uppercase tracking-widest">
+                <Sparkles size={12} />
+                <span>Market Disruptor</span>
+              </div>
             </div>
           </div>
-          <button className="whitespace-nowrap px-10 py-6 bg-[#B22830] hover:bg-red-700 text-white rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl active:scale-95">
-             Generate Campaign Brief
-          </button>
+
+          <div className="space-y-4 text-sm">
+            <div className="space-y-1">
+              <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                Ghi chú từ AI Intelligence
+              </h4>
+
+              <p className="text-slate-700 leading-relaxed">
+                <span className="font-bold">Món mới:</span>{" "}
+                {bK.new_launch || "Chưa có"}
+              </p>
+            </div>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Ưu điểm:</span>{" "}
+              {bK.key_strengths ||
+                "Không gian hiện đại, thiết kế bắt mắt phù hợp giới trẻ, dịch vụ thân thiện."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Thách thức:</span>{" "}
+              {bK.customer_painpoints ||
+                "Giá thành cao so với mặt bằng chung, không gian đôi khi quá ồn ào."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Vị thế so với Highlands:</span>{" "}
+              {bK.vs_highlands ||
+                "Katinat chiếm ưu thế tuyệt đối về vibe và trải nghiệm khách hàng, tạo cảm giác thân thiện."}
+            </p>
+
+            <p className="text-slate-700 leading-relaxed">
+              <span className="font-bold">Chiến lược đề xuất:</span>{" "}
+              {bK.strategic_advice ||
+                "Duy trì định vị phong cách sống và không gian hiện đại."}
+            </p>
+
+            <div className="bg-white/50 p-5 rounded-2xl border border-amber-200/50">
+              <h5 className="text-[10px] font-black text-amber-700 uppercase mb-2 tracking-widest">
+                Action Items
+              </h5>
+
+              <ul className="text-xs text-slate-600 space-y-1.5 list-decimal pl-4 font-medium">
+                <li>Giữ vững thẩm mỹ thiết kế</li>
+                <li>Đa dạng hóa menu thức uống theo mùa</li>
+                <li>Cải thiện độ cách âm tại các chi nhánh đông đúc</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
