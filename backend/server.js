@@ -16,7 +16,7 @@ const startServer = async () => {
   try {
     await connectDB(); 
     
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Server running at http://localhost:${PORT}`);
       console.log(`🚀 API Phê duyệt của bạn C: http://localhost:${PORT}/api/crm/approve-reply/:id`);
     });
