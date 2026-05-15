@@ -12,7 +12,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const { data } = await axios.get('http://localhost:5000/api/auth/users', {
+      const { data } = await axios.get('http://localhost:5001/api/auth/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(data);
@@ -29,7 +29,7 @@ const UserManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/auth/users/${editingUser._id}`, 
+      await axios.put(`http://localhost:5001/api/auth/users/${editingUser._id}`, 
         {
           username: editingUser.username,
           role: editingUser.role,
@@ -51,7 +51,7 @@ const UserManagement = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này? Thao tác này không thể hoàn tác.")) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5000/api/auth/users/${id}`, {
+        await axios.delete(`http://localhost:5001/api/auth/users/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success("Đã xóa người dùng");

@@ -8,9 +8,10 @@ import Login from "./pages/Dashboard/Login";
 import Register from "./pages/Dashboard/Register";
 import { Toaster } from 'react-hot-toast';
 import ProfilePage from "./pages/Dashboard/ProfilePage";
-
+import ReportPage from "./pages/Dashboard/ReportPage";
 // --- THÊM DÒNG NÀY ---
 import UserManagement from "./pages/Dashboard/UserManagement"; 
+import AIConsultantPage from "./pages/Dashboard/AIConsultantPage";
 // ----------------------
 
 const SentimentPage = lazy(() => import("./pages/Dashboard/SentimentPage"));
@@ -71,14 +72,20 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Chỉ Admin mới vào được AI Chat */}
-            <Route path="/ai-chat" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <InteractionPage />
+            {/* AI Strategic Consultant - Mọi role đều có thể dùng để xem tư vấn */}
+            <Route path="/ai-consultant" element={
+              <ProtectedRoute>
+                <AIConsultantPage />
               </ProtectedRoute>
             } />
-
-          </Route>
+<Route
+  path="/reports"
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <ReportPage />
+    </ProtectedRoute>
+  }
+/>          </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
