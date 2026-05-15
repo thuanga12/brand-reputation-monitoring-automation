@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom"; // Thêm NavLink vào đây
 import WorkflowTabs from "../components/WorkflowTabs";
-import { User, LogOut, ChevronRight, ShieldAlert, LayoutDashboard } from "lucide-react"; // Import thêm icon cần thiết
+import { User, LogOut, ChevronRight, ShieldAlert, LayoutDashboard, Sparkles } from "lucide-react"; // Import thêm icon cần thiết
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -65,6 +65,21 @@ export default function AdminLayout() {
               <div className="flex items-center gap-3">
                 <LayoutDashboard size={18} />
                 <span>Bảng điều khiển</span>
+              </div>
+              <ChevronRight size={14} className="opacity-50" />
+            </NavLink>
+
+            <NavLink 
+              to="/ai-consultant"
+              className={({ isActive }) => 
+                `flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                  isActive ? 'bg-red-50 text-[#B22830] font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles size={18} className="text-[#B22830]" />
+                <span>Trợ lý Chiến lược AI</span>
               </div>
               <ChevronRight size={14} className="opacity-50" />
             </NavLink>
