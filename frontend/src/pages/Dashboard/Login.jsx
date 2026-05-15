@@ -20,7 +20,7 @@ const Login = () => {
       toast.success(`Chào mừng ${data.user.username} quay trở lại!`);
       
       // Chuyển hướng vào Dashboard
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Email hoặc mật khẩu không đúng!');
     }
