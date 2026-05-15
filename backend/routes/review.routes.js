@@ -4,13 +4,31 @@ import {
   getReviewById,
   updateReply,
   resolveReview,
+  getCompetitorHighlights,
 } from "../controllers/review.controller.js";
+
+import { getHighlandReviews } from "../controllers/reviewHighland.controller.js";
 
 const router = express.Router();
 
-router.get("/", getReviews); // Lấy danh sách review kèm filter
-router.get("/:id", getReviewById); // Xem chi tiết 1 review
-router.patch("/:id/reply", updateReply); // Cập nhật nội dung trả lời (Bạn C)
-router.patch("/:id/resolve", resolveReview); // Đánh dấu đã xử lý xong
+/**
+ * ROUTES CHO HIGHLANDS
+ * Endpoint: /api/reviews/highland
+ */
+router.get("/highland", getHighlandReviews);
+
+/**
+ * ROUTES CHO ĐỐI THỦ
+ * Endpoint: /api/reviews/competitor-highlights?brand=Katinat&type=Tích cực
+ */
+router.get("/competitor-highlights", getCompetitorHighlights);
+
+/**
+ * ROUTES QUẢN TRỊ REVIEW CHUNG
+ */
+router.get("/", getReviews);
+router.get("/:id", getReviewById);
+router.patch("/:id/reply", updateReply);
+router.patch("/:id/resolve", resolveReview);
 
 export default router;

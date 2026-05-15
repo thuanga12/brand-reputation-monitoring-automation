@@ -1,24 +1,19 @@
-import mongoose from "mongoose";
-
-// Định nghĩa Model để đọc collection 'sosanh'
-const Comparison = mongoose.model('Comparison', new mongoose.Schema({}, { strict: false }), 'sosanh');
+import Competitor from "../models/Competitor.js";
 
 export const getCompetitors = async (req, res) => {
   try {
-    // Lấy 3 bản ghi mới nhất từ n8n
-    const competitors = await Comparison.find()
-      .sort({ report_date: -1, _id: -1 })
-      .limit(3);
+    // Lấy tất cả dữ liệu so sánh, sắp xếp theo ngày mới nhất
+    const competitors = await Competitor.find().sort({ report_date: -1 });
+    
+    if (!competitors || competitors.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy dữ liệu đối thủ" });
+    }
 
-    // Quy đổi tỷ lệ (0.52 -> 52%) để hiển thị trên Frontend
-    const formattedData = competitors.map(item => ({
-      ...item._doc,
-      positive_rate: item.positive_rate ? (item.positive_rate * 100).toFixed(0) : 0,
-      negative_rate: item.negative_rate ? (item.negative_rate * 100).toFixed(0) : 0
-    }));
-
-    res.status(200).json(formattedData);
+    res.status(200).json(competitors);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy dữ liệu đối thủ", error: error.message });
+    res.status(500).json({ 
+      message: "Lỗi server khi lấy dữ liệu đối thủ", 
+      error: error.message 
+    });
   }
 };
