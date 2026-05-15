@@ -1,34 +1,34 @@
 import express from "express";
 import {
   getReviews,
-  getReviewById, // Thêm nếu cần lấy chi tiết
+  getReviewById,
   updateReply,
   resolveReview,
-  getCompetitorHighlights, // Hàm lấy review thực tế của đối thủ
+  getCompetitorHighlights,
 } from "../controllers/review.controller.js";
 
-// Import hàm lấy dữ liệu Highlands từ controller riêng của bạn
 import { getHighlandReviews } from "../controllers/reviewHighland.controller.js";
 
 const router = express.Router();
 
 /**
- * ROUTES CHO HIGHLANDS (Dữ liệu nội bộ)
+ * ROUTES CHO HIGHLANDS
+ * Endpoint: /api/reviews/highland
  */
-router.get("/highland", getHighlandReviews); 
+router.get("/highland", getHighlandReviews);
 
 /**
- * ROUTES CHO ĐỐI THỦ (Dữ liệu cào từ n8n)
+ * ROUTES CHO ĐỐI THỦ
+ * Endpoint: /api/reviews/competitor-highlights?brand=Katinat&type=Tích cực
  */
-// Endpoint: /api/reviews/competitor-highlights?brand=Katinat&type=Tích cực
-router.get("/competitor-highlights", getCompetitorHighlights); 
+router.get("/competitor-highlights", getCompetitorHighlights);
 
 /**
- * ROUTES QUẢN TRỊ CHUNG (CRM)
+ * ROUTES QUẢN TRỊ REVIEW CHUNG
  */
-router.get("/", getReviews); 
+router.get("/", getReviews);
 router.get("/:id", getReviewById);
-router.patch("/:id/reply", updateReply); 
+router.patch("/:id/reply", updateReply);
 router.patch("/:id/resolve", resolveReview);
 
 export default router;
