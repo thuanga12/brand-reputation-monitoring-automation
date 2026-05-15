@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
-
 import reviewRoutes from "./routes/review.routes.js";
 import reviewHighlandRoutes from "./routes/reviewHighland.routes.js";
 // Import file route đối thủ vào đây
-import competitorRoutes from "./routes/competitor.routes.js"; 
+import competitorRoutes from "./routes/competitor.routes.js";
 import authRoutes from "./routes/authRoutes.js";
+import crm from "./routes/crm.route.js";
+import aiRoutes from "./routes/ai.routes.js";
 const app = express();
 
 app.use(
@@ -26,7 +27,9 @@ app.get("/", (req, res) => {
 // Các Route nằm ở dưới
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/reviews-highland", reviewHighlandRoutes);
-app.use('/api/auth', authRoutes); 
-app.use("/api/competitors", competitorRoutes); 
+app.use('/api/auth', authRoutes);
+app.use("/api/competitors", competitorRoutes);
+app.use("/api/crm", crm);
+app.use("/api/ai", aiRoutes);
 
 export default app;
