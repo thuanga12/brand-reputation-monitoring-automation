@@ -2,3 +2,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@media print {
+  body {
+    background: white !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

@@ -1,0 +1,90 @@
+
+import ReviewHighland from "../models/ReviewHighland.js"; 
+import CRM from "../models/CRM.js";
+
+// API 1: Phê duyệt phản hồi
+export const approveReviewReply = async (req, res) => {
+  const { id } = req.params;
+  const { final_reply } = req.body;
+
+  try {
+    // 2. Bây giờ dùng ReviewHighland ở đây là chạy mượt luôn
+    const updatedReview = await ReviewHighland.findByIdAndUpdate(
+      id,
+      { 
+        draft_reply: final_reply, 
+        reply_status: "approved", 
+        resolved: true 
+      },
+      { returnDocument: 'after' } 
+    );
+    
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Không tìm thấy bản ghi!" });
+    }
+    
+    res.status(200).json({ message: "Đã duyệt thành công!", data: updatedReview });
+  } catch (error) {
+    // Log lỗi ra để nếu có sai gì khác còn biết đường sửa
+    console.error("Lỗi tại approveReviewReply:", error.message); 
+    res.status(500).json({ message: "Lỗi Server", error: error.message });
+  }
+};
+
+// API 2: Lấy dữ liệu chiến lược CRM (Churn risk, Recovery, Retention)
+// Nhiệm vụ của Bạn C: Trả về dữ liệu từ n8n cho Frontend
+export const getCRMStrategy = async (req, res) => {
+  try {
+    // Thêm timeout để không bị treo server
+    const strategy = await CRM.findOne().sort({ _id: -1 }).lean().maxTimeMS(5000);
+
+    if (!strategy) {
+      return res.status(200).json({
+        churn_reason: "Chưa có dữ liệu",
+        recovery_action: "N/A",
+        loyalty_hook: "N/A",
+        retention_action: "N/A",
+        churn_risk_rate: "0%"
+      });
+    }
+
+    res.status(200).json(strategy);
+  } catch (error) {
+    console.error("Lỗi Backend CRM:", error.message);
+    // Trả về lỗi chi tiết để Frontend biết đường xử lý
+    res.status(500).json({ message: "Lỗi kết nối Database", detail: error.message });
+  }
+};
+// API 3: Lấy toàn bộ dữ liệu CRM để làm trang Báo cáo
+export const getCRMReports = async (req, res) => {
+  try {
+    const { month, branch } = req.query;
+
+    const filter = {};
+
+    if (month && month !== "all") {
+      filter.report_month = month;
+    }
+
+    if (branch && branch !== "all") {
+      filter.branch_name = branch;
+    }
+
+    const reports = await CRM.find(filter)
+      .sort({ report_month: -1, branch_name: 1 })
+      .lean()
+      .maxTimeMS(5000);
+
+    res.status(200).json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    console.error("Lỗi lấy dữ liệu báo cáo CRM:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi lấy dữ liệu báo cáo CRM",
+      detail: error.message,
+    });
+  }
+};

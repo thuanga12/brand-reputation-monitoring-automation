@@ -85,3 +85,25 @@ export const resolveReview = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// controllers/review.controller.js
+
+export const getCompetitorHighlights = async (req, res) => {
+  try {
+    const { brand, type } = req.query; // brand: 'Phúc Long' | 'Katinat', type: 'Tích cực' | 'Tiêu cực'
+
+    const query = {
+      // Tìm trong field title hoặc review_text có chứa tên thương hiệu
+      title: { $regex: brand, $options: 'i' }
+    };
+
+    if (type) query.sentiment = type;
+
+    const reviews = await Review.find(query)
+      .sort({ rating: type === 'Tích cực' ? -1 : 1, published_at: -1 })
+      .limit(3); // Chỉ lấy 3 cái "đắt" nhất để tránh làm nặng UI
+
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
