@@ -24,8 +24,12 @@ const WorkflowTabs = () => {
         💬 Tương tác AI
       </NavLink>
       
-      <button className={`${baseClass} ${inactiveClass}`}>🗂 Quản trị</button>
-      <button className={`${baseClass} ${inactiveClass}`}>📄 Báo cáo</button>
+      <NavLink to="/users" className={({ isActive }) => `${baseClass} ${isActive ? activeClass : inactiveClass}`}>
+        🗂 Quản trị
+      </NavLink>
+      <NavLink to="/reports" className={({ isActive }) => `${baseClass} ${isActive ? activeClass : inactiveClass}`}>
+        📄 Báo cáo
+      </NavLink>
     </div>
   );
 };
