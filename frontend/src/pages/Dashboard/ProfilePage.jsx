@@ -39,7 +39,7 @@ const ProfilePage = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.put(
-        'http://localhost:5000/api/auth/update-profile', 
+        'http://localhost:5001/api/auth/update-profile', 
         {
           username: formData.username,
           avatar: formData.avatar,
