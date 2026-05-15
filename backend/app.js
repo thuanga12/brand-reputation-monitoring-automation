@@ -9,12 +9,12 @@ import crm from "./routes/crm.route.js";
 import aiRoutes from "./routes/ai.routes.js";
 const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+app.use(cors());
 
 // ĐƯA 2 DÒNG NÀY LÊN ĐẦU (Xóa dòng express.json() cũ đi)
 app.use(express.json({ limit: '10mb' }));

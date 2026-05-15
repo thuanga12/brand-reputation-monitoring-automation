@@ -290,7 +290,7 @@ const loadReviews = async () => {
                   id={`reply-${item._id}`}
                   className="w-full p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm leading-relaxed shadow-inner hover:border-gray-300 transition-all"
                   rows="3"
-                  defaultValue={item.draft_reply || `Chào bạn ${item.author}, Highlands Coffee xin ghi nhận...`}
+                  defaultValue={item.Draft_Reply || `Chào bạn ${item.author}, Highlands Coffee xin ghi nhận...`}
                 ></textarea>
               </div>
 
